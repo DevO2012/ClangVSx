@@ -156,5 +156,9 @@ namespace ClangVSx
     public static CVXRegistryItem<String> TripleWin32 = new CVXRegistryItem<String>(() => TripleWin32, "i686-pc-win32");
     public static CVXRegistryItem<String> TripleX64 = new CVXRegistryItem<String>(() => TripleX64, "x86_64-pc-win32");
     public static CVXRegistryItem<String> TripleARM = new CVXRegistryItem<String>(() => TripleARM, "armv7-apple-darwin10");
+
+    //DevO: 20.09.2012
+    public static CVXRegistryItem<Boolean> EnableCpp11 = new CVXRegistryItem<Boolean>(() => EnableCpp11, true);
+    public static CVXRegistryItem<Boolean> EnableMsABI = new CVXRegistryItem<Boolean>(() => EnableMsABI, false);
   }
 }

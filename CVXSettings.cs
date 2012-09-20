@@ -38,6 +38,10 @@ namespace ClangVSx
       cvxTripleX64.Text = CVXRegistry.TripleX64;
       cvxTripleARM.Text = CVXRegistry.TripleARM;
 
+      //DevO: 20.09.2012
+      cvxEnableCpp11.Checked = CVXRegistry.EnableCpp11;
+      cvxEnableMsABI.Checked = CVXRegistry.EnableMsABI;
+
       // blot the version number up in the title bar
       Assembly assem = Assembly.GetExecutingAssembly();
       Version vers = assem.GetName().Version;
@@ -74,6 +78,10 @@ namespace ClangVSx
         CVXRegistry.TripleWin32.Value = cvxTripleWin32.Text;
         CVXRegistry.TripleX64.Value = cvxTripleX64.Text;
         CVXRegistry.TripleARM.Value = cvxTripleARM.Text;
+
+        //DevO: 20.09.2012
+        CVXRegistry.EnableCpp11.Value = cvxEnableCpp11.Checked;
+        CVXRegistry.EnableMsABI.Value = cvxEnableMsABI.Checked;
       }
 
       if (!validEXELocation(cvxLocation.Text))
@@ -137,5 +145,6 @@ namespace ClangVSx
       DialogResult = DialogResult.Cancel;
       Close();
     }
+
   }
 }

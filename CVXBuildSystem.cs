@@ -625,6 +625,19 @@ namespace ClangVSx
         defaultCompilerString.Append("-ccc-print-phases ");
       }
 
+      //DevO: 20.09.2012
+      if (CVXRegistry.EnableCpp11)
+      {
+          defaultCompilerString.Append("-std=c++11 "); 
+      }
+      if (CVXRegistry.EnableMsABI)
+      {
+          defaultCompilerString.Append("-Xclang -cxx-abi -Xclang microsoft ");
+      }
+
+      // new <<<
+
+
       // add the UNICODE defines?
       if (vcCfg.CharacterSet == Microsoft.VisualStudio.VCProjectEngine.charSet.charSetUnicode)
       {
@@ -758,7 +771,7 @@ namespace ClangVSx
             vcLinkerTool.SubSystem != subSystemOption.subSystemConsole)
         {
           WriteToOutputPane("Unsupported subsystem type - " + vcLinkerTool.SubSystem.ToString() + " - (Windows/Console only)\n");
-          return false;
+          //return false; 
         }
       }
 
