@@ -1,0 +1,19 @@
+Here is Meta Bug Support Microsoft C++ ABI:
+
+http://llvm.org/bugs/show_bug.cgi?id=12477
+
+
+
+Here is about __ptr64 problem:
+
+http://llvm.org/bugs/show_bug.cgi?id=13792
+
+
+
+Her eis the link to MicrosoftCXXNameMangler: 
+
+http://llvm.org/svn/llvm-project/cfe/trunk/lib/AST/MicrosoftMangle.cpp
+
+
+Function mangleQualifiers() does not support __ptr64 for now.
+How to add this ???
