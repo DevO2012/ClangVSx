@@ -1,33 +1,33 @@
 /*
- * CLangVS - Compiler Bridge for CLang in MS Visual Studio
- * Harry Denholm, ishani.org 2011
+ * ClangVSx - Compiler Bridge for CLang in MS Visual Studio
+ * Harry Denholm, ishani.org 2011-2012
+ * 
+ * https://github.com/ishani/ClangVSx
+ * http://www.ishani.org/web/articles/code/clangvsx/
  *
  * Released under LLVM Release License. See LICENSE.TXT for details.
  */
 
 using System;
-using Extensibility;
+using System.Windows.Forms;
 using EnvDTE;
 using EnvDTE80;
-using Microsoft.VisualStudio.CommandBars;
-using System.Resources;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Reflection;
-using System.Text;
-using System.Globalization;
-using System.Windows.Forms;
-using Microsoft.VisualStudio.VCProject;
 using Microsoft.VisualStudio.VCProjectEngine;
 
 namespace ClangVSx
 {
-  class ClangOps
+  internal class ClangOps
   {
-    private OutputWindowPane  _outputPane;
-    private Window            _vsOutputWindow;
-    private DTE2              _applicationObject;
+    #region Delegates
+
+    public delegate void BuildEventDelegate(bool success);
+
+    #endregion
+
+    private readonly DTE2 _applicationObject;
+
+    private readonly OutputWindowPane _outputPane;
+    private readonly Window _vsOutputWindow;
 
     /// <summary>
     /// 
@@ -39,9 +39,9 @@ namespace ClangVSx
       const string owpName = "Clang C/C++";
 
       // go find the output window
-      _vsOutputWindow = _applicationObject.Windows.Item(EnvDTE.Constants.vsWindowKindOutput);
+      _vsOutputWindow = _applicationObject.Windows.Item(Constants.vsWindowKindOutput);
       _vsOutputWindow.Visible = true;
-      OutputWindow theOutputWindow = (OutputWindow)_vsOutputWindow.Object;
+      var theOutputWindow = (OutputWindow)_vsOutputWindow.Object;
 
       // add or acquire the output pane
       try
@@ -65,37 +65,39 @@ namespace ClangVSx
     /// <summary>
     /// compile a single VCFile, do nothing with the OBJ
     /// </summary>
-    public bool CompileSingleFile(VCFile vcFile, VCProject vcProject, VCConfiguration vcCfg, String additionalCmds = "")
+    public bool CompileSingleFile(VCFile vcFile, VCProject vcProject, VCConfiguration vcCfg,
+                                  String additionalCmds = "")
     {
       CVXBuildSystem buildSystem;
       try
       {
         buildSystem = new CVXBuildSystem(_vsOutputWindow, _outputPane);
       }
-      catch (System.Exception ex)
+      catch (Exception ex)
       {
         MessageBox.Show(ex.Message, "ClangVSx Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return false;
       }
 
+      String prevEnv = Environment.CurrentDirectory;
+
       try
       {
+        Environment.CurrentDirectory = vcProject.ProjectDirectory;
+        WriteToOutputPane("Project Directory : " + Environment.CurrentDirectory + "\n");
+
         return buildSystem.CompileSingleFile(vcFile, vcProject, vcCfg, additionalCmds);
       }
-      catch (System.Exception ex)
+      catch (Exception ex)
       {
         WriteToOutputPane("Exception During File Compile : \n" + ex.Message + "\n");
       }
+      finally
+      {
+        Environment.CurrentDirectory = prevEnv;
+      }
 
       return false;
-    }
-
-    public delegate void BuildEventDelegate(bool success);
-    public class ProjectBuildConfig
-    {
-      public BuildEventDelegate BuildBegun;
-      public BuildEventDelegate BuildFinished;
-      public bool JustLink;
     }
 
     /// <summary>
@@ -104,9 +106,10 @@ namespace ClangVSx
     public void BuildActiveProject(object buildConfig)
     {
       // cast the input object; this is designed to be run with ParameterizedThreadStart, so we have to accept 'object'...
-      ProjectBuildConfig config = (buildConfig as ProjectBuildConfig);
+      var config = (buildConfig as ProjectBuildConfig);
       if (config == null)
-        throw new InvalidCastException("BuildActiveProject called with invalid argument - ProjectBuildConfig required");
+        throw new InvalidCastException(
+            "BuildActiveProject called with invalid argument - ProjectBuildConfig required");
 
       // mark the build as ready-to-go
       config.BuildBegun(true);
@@ -116,12 +119,14 @@ namespace ClangVSx
       {
         buildSystem = new CVXBuildSystem(_vsOutputWindow, _outputPane);
       }
-      catch (System.Exception ex)
+      catch (Exception ex)
       {
         MessageBox.Show(ex.Message, "ClangVSx Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         config.BuildFinished(false);
         return;
       }
+
+      String prevEnv = Environment.CurrentDirectory;
 
       try
       {
@@ -136,30 +141,32 @@ namespace ClangVSx
           {
             WriteToOutputPane("Building Project : " + p.Name + "\n");
 
-            VCProject vcProject = p.Object as VCProject;
+            var vcProject = p.Object as VCProject;
             if (vcProject == null)
             {
               WriteToOutputPane("Error : Could not cast project to VCProject.\n");
-              config.BuildFinished(false); 
+              config.BuildFinished(false);
               return;
             }
 
-            EnvDTE.Configuration cfg = p.ConfigurationManager.ActiveConfiguration;
+            Configuration cfg = p.ConfigurationManager.ActiveConfiguration;
 
             VCConfiguration vcCfg = null;
             try
             {
-              IVCCollection cfgArray = (IVCCollection)vcProject.Configurations;
+              var cfgArray = (IVCCollection)vcProject.Configurations;
               foreach (VCConfiguration vcr in cfgArray)
               {
-                if (vcr.ConfigurationName == cfg.ConfigurationName &&
-                    vcr.Platform.Name == cfg.PlatformName)
+                // we .ToLower() here as there are some weird occurances where names don't match as VS is holding
+                // onto a capitalised version that isn't visible in any of the VS IDEs :Z
+                if (vcr.ConfigurationName.ToLower() == cfg.ConfigurationName.ToLower() &&
+                    vcr.Platform.Name.ToLower() == cfg.PlatformName.ToLower())
                 {
                   vcCfg = vcr;
                 }
               }
             }
-            catch (System.Exception)
+            catch (Exception)
             {
               WriteToOutputPane("Error - failed to determine VC configuration\n");
             }
@@ -173,6 +180,9 @@ namespace ClangVSx
               WriteToOutputPane("Configuration : " + vcCfg.Name + "\n");
             }
 
+            Environment.CurrentDirectory = vcProject.ProjectDirectory;
+            WriteToOutputPane("Project Directory : " + Environment.CurrentDirectory + "\n");
+
             bool result = buildSystem.BuildProject(vcProject, vcCfg, config.JustLink);
             config.BuildFinished(result);
             return;
@@ -183,14 +193,26 @@ namespace ClangVSx
           }
         }
       }
-      catch (System.Exception ex)
+      catch (Exception ex)
       {
         WriteToOutputPane("Exception During Build : \n" + ex.Message + "\n");
       }
       finally
       {
         config.BuildFinished(false);
+        Environment.CurrentDirectory = prevEnv; 
       }
     }
+
+    #region Nested type: ProjectBuildConfig
+
+    public class ProjectBuildConfig
+    {
+      public BuildEventDelegate BuildBegun;
+      public BuildEventDelegate BuildFinished;
+      public bool JustLink;
+    }
+
+    #endregion
   }
 }

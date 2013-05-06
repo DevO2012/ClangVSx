@@ -1,18 +1,18 @@
 /*
- * CLangVS - Compiler Bridge for CLang in MS Visual Studio
- * Harry Denholm, ishani.org 2011
+ * ClangVSx - Compiler Bridge for CLang in MS Visual Studio
+ * Harry Denholm, ishani.org 2011-2012
+ * 
+ * https://github.com/ishani/ClangVSx
+ * http://www.ishani.org/web/articles/code/clangvsx/
  *
  * Released under LLVM Release License. See LICENSE.TXT for details.
  */
 
 
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
 
 namespace ClangVSx
@@ -27,36 +27,37 @@ namespace ClangVSx
       InitializeComponent();
 
       cvxLocation.Text = CVXRegistry.PathToClang;
-      
+
       cvxShowCmds.Checked = CVXRegistry.ShowCommands;
       cvxBatch.Checked = CVXRegistry.MakeBatchFiles;
       cvxEcho.Checked = CVXRegistry.EchoInternal;
       cvxPhases.Checked = CVXRegistry.ShowPhases;
+
+      cvxCOptCPP11.Checked = CVXRegistry.COptCPP11.Value;
+      cvxCOptMSABI.Checked = CVXRegistry.COptMSABI.Value;
 
       cvxCommonArgs.Text = CVXRegistry.CommonArgs;
       cvxTripleWin32.Text = CVXRegistry.TripleWin32;
       cvxTripleX64.Text = CVXRegistry.TripleX64;
       cvxTripleARM.Text = CVXRegistry.TripleARM;
 
-      //DevO: 20.09.2012
-      cvxEnableCpp11.Checked = CVXRegistry.EnableCpp11;
-      cvxEnableMsABI.Checked = CVXRegistry.EnableMsABI;
+      cvxTOptOldSyntax.Checked = CVXRegistry.TOptOldSyntax.Value;
 
       // blot the version number up in the title bar
       Assembly assem = Assembly.GetExecutingAssembly();
       Version vers = assem.GetName().Version;
-      this.Text = "ClangVSx " + vers.ToString();
+      Text = "ClangVSx [" + vers + "]";
     }
 
     private bool validEXELocation(String loc)
     {
       // scientific! -.-
-      return (System.IO.File.Exists(loc) && loc.ToLower().EndsWith(".exe"));
+      return (File.Exists(loc) && loc.ToLower().EndsWith(".exe"));
     }
 
     private void cvxBrowse_Click(object sender, EventArgs e)
     {
-      findClangExe.InitialDirectory = System.IO.Path.GetDirectoryName(cvxLocation.Text);
+      findClangExe.InitialDirectory = Path.GetDirectoryName(cvxLocation.Text);
       if (findClangExe.ShowDialog(this) == DialogResult.OK)
       {
         cvxLocation.Text = findClangExe.FileName;
@@ -74,19 +75,21 @@ namespace ClangVSx
         CVXRegistry.EchoInternal.Value = cvxEcho.Checked;
         CVXRegistry.ShowPhases.Value = cvxPhases.Checked;
 
+        CVXRegistry.COptCPP11.Value = cvxCOptCPP11.Checked;
+        CVXRegistry.COptMSABI.Value = cvxCOptMSABI.Checked;
+
         CVXRegistry.CommonArgs.Value = cvxCommonArgs.Text;
         CVXRegistry.TripleWin32.Value = cvxTripleWin32.Text;
         CVXRegistry.TripleX64.Value = cvxTripleX64.Text;
         CVXRegistry.TripleARM.Value = cvxTripleARM.Text;
 
-        //DevO: 20.09.2012
-        CVXRegistry.EnableCpp11.Value = cvxEnableCpp11.Checked;
-        CVXRegistry.EnableMsABI.Value = cvxEnableMsABI.Checked;
+        CVXRegistry.TOptOldSyntax.Value = cvxTOptOldSyntax.Checked;
       }
 
       if (!validEXELocation(cvxLocation.Text))
       {
-        MessageBox.Show("Warning: Cannot find file specified for CLANG.EXE, will be unable to build projects.", "ClangVSx Settings");
+        MessageBox.Show("Warning: Cannot find file specified for CLANG.EXE, will be unable to build projects.",
+                        "ClangVSx Settings");
       }
 
       DialogResult = DialogResult.OK;
@@ -100,11 +103,11 @@ namespace ClangVSx
         String cvxStatsStr = "";
 
         // execute the compiler, ask for version info
-        System.Diagnostics.Process compileProcess = new System.Diagnostics.Process();
+        var compileProcess = new Process();
         compileProcess.StartInfo.FileName = cvxLocation.Text;
         compileProcess.StartInfo.Arguments = "-v";
         compileProcess.StartInfo.UseShellExecute = false;
-        compileProcess.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
+        compileProcess.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
         compileProcess.StartInfo.CreateNoWindow = true;
         compileProcess.StartInfo.RedirectStandardOutput = true;
         compileProcess.StartInfo.RedirectStandardError = true;
@@ -137,7 +140,7 @@ namespace ClangVSx
 
     private void url_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
-      System.Diagnostics.Process.Start(((LinkLabel)sender).Text);
+      Process.Start(((LinkLabel)sender).Text);
     }
 
     private void cvxCancel_Click(object sender, EventArgs e)

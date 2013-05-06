@@ -1,22 +1,22 @@
 /*
- * CLangVS - Compiler Bridge for CLang in MS Visual Studio
- * Harry Denholm, ishani.org 2011
+ * ClangVSx - Compiler Bridge for CLang in MS Visual Studio
+ * Harry Denholm, ishani.org 2011-2012
+ * 
+ * https://github.com/ishani/ClangVSx
+ * http://www.ishani.org/web/articles/code/clangvsx/
  *
  * Released under LLVM Release License. See LICENSE.TXT for details.
  */
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using Microsoft.Win32;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace ClangVSx
 {
-#region Generic registry access
+
+  #region Generic registry access
 
   public static class RegistryBooleanSupport
   {
@@ -24,7 +24,7 @@ namespace ClangVSx
     {
       if (state.GetType() == typeof(Boolean))
       {
-        Boolean stateAsBool = (Boolean)state;
+        var stateAsBool = (Boolean)state;
 
         Int32 defaultState = (stateAsBool ? 1 : 0);
         defaultState = (Int32)reg.GetValue(keyName, defaultState);
@@ -41,7 +41,7 @@ namespace ClangVSx
     {
       if (state.GetType() == typeof(Boolean))
       {
-        Boolean stateAsBool = (Boolean)state;
+        var stateAsBool = (Boolean)state;
 
         Int32 saveValue = (stateAsBool ? 1 : 0);
         reg.SetValue(keyName, saveValue);
@@ -53,7 +53,7 @@ namespace ClangVSx
     }
   }
 
-  class Win32Registry
+  internal class Win32Registry
   {
     // root reg key 
     private const String CVXRegistryKey = "Software\\Ishani\\ClangVSx";
@@ -82,7 +82,7 @@ namespace ClangVSx
 
       return ((itemDefaultState != null) ? itemDefaultState : defaultValue);
     }
-    
+
     public void SaveTo<T>(String keyName, T saveValue)
     {
       RegistryKey key = Registry.CurrentUser.OpenSubKey(CVXRegistryKey, true);
@@ -102,13 +102,13 @@ namespace ClangVSx
     }
   }
 
-#endregion
+  #endregion
 
   internal class CVXRegistryItem<T>
   {
-    private Win32Registry _registry = new Win32Registry();
-    private T _default_value;
-    private string _name;
+    private readonly T _default_value;
+    private readonly string _name;
+    private readonly Win32Registry _registry = new Win32Registry();
 
     public CVXRegistryItem(Expression<Func<CVXRegistryItem<T>>> expr, T defaultValue)
     {
@@ -123,13 +123,10 @@ namespace ClangVSx
       get
       {
         // sketchy way to get name of property from inside accessors
-        return _registry.LoadFrom<T>(_name, _default_value);
+        return _registry.LoadFrom(_name, _default_value);
       }
 
-      set
-      {
-        _registry.SaveTo<T>(_name, value);
-      }
+      set { _registry.SaveTo(_name, value); }
     }
 
     // this is just sugar that allows for
@@ -143,22 +140,36 @@ namespace ClangVSx
   /// <summary>
   /// Wrapper around registry access to load/save AddIn settings
   /// </summary>
-  abstract class CVXRegistry
+  internal abstract class CVXRegistry
   {
-    public static CVXRegistryItem<String> PathToClang = new CVXRegistryItem<String>(() => PathToClang, "C:\\clang\\clang.exe");
+    public static CVXRegistryItem<String> PathToClang = new CVXRegistryItem<String>(() => PathToClang,
+                                                                                    "C:\\clang\\clang.exe");
 
+    // output options
     public static CVXRegistryItem<Boolean> ShowCommands = new CVXRegistryItem<Boolean>(() => ShowCommands, false);
     public static CVXRegistryItem<Boolean> MakeBatchFiles = new CVXRegistryItem<Boolean>(() => MakeBatchFiles, false);
     public static CVXRegistryItem<Boolean> EchoInternal = new CVXRegistryItem<Boolean>(() => EchoInternal, false);
     public static CVXRegistryItem<Boolean> ShowPhases = new CVXRegistryItem<Boolean>(() => ShowPhases, false);
 
-    public static CVXRegistryItem<String> CommonArgs = new CVXRegistryItem<String>(() => CommonArgs, "");
-    public static CVXRegistryItem<String> TripleWin32 = new CVXRegistryItem<String>(() => TripleWin32, "i686-pc-win32");
-    public static CVXRegistryItem<String> TripleX64 = new CVXRegistryItem<String>(() => TripleX64, "x86_64-pc-win32");
-    public static CVXRegistryItem<String> TripleARM = new CVXRegistryItem<String>(() => TripleARM, "armv7-apple-darwin10");
 
-    //DevO: 20.09.2012
-    public static CVXRegistryItem<Boolean> EnableCpp11 = new CVXRegistryItem<Boolean>(() => EnableCpp11, true);
-    public static CVXRegistryItem<Boolean> EnableMsABI = new CVXRegistryItem<Boolean>(() => EnableMsABI, false);
+    // compiler options toggles
+    public static CVXRegistryItem<Boolean> COptCPP11 = new CVXRegistryItem<Boolean>(() => COptCPP11, true);
+    public static CVXRegistryItem<Boolean> COptMSABI = new CVXRegistryItem<Boolean>(() => COptMSABI, false);
+
+
+    // global options
+    public static CVXRegistryItem<String> CommonArgs = new CVXRegistryItem<String>(() => CommonArgs, "");
+
+    public static CVXRegistryItem<String> TripleWin32 = new CVXRegistryItem<String>(() => TripleWin32,
+                                                                                    "i686-pc-win32");
+
+    public static CVXRegistryItem<String> TripleX64 = new CVXRegistryItem<String>(() => TripleX64, "x86_64-pc-win32");
+
+    public static CVXRegistryItem<String> TripleARM = new CVXRegistryItem<String>(() => TripleARM,
+                                                                                  "armv7-apple-darwin10");
+
+    public static CVXRegistryItem<Boolean> TOptOldSyntax = new CVXRegistryItem<Boolean>(() => TOptOldSyntax, false);
+
+    
   }
 }
